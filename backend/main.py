@@ -75,6 +75,24 @@ class ProcessRequest(BaseModel):
     """Defines the expected structure for a document processing request."""
     directory: str = "backend/documents_for_rag" # Default directory for processing documents
 
+class MCPContextRequest(BaseModel):
+    """Defines the expected structure for an MCP context request."""
+    message: str
+
+class MCPContextResponse(BaseModel):
+    """Defines the expected structure for an MCP context response."""
+    user_query: str
+    retrieved_context_chunks: list[str]
+
+class MCPResponseRequest(BaseModel):
+    """Defines the expected structure for an MCP response request."""
+    user_query: str
+    context_chunks: list[str]
+
+class MCPResponseResponse(BaseModel):
+    """Defines the expected structure for an MCP response response."""
+    llm_response: str
+
 # --- API Endpoints ---
 @app.get("/")
 async def read_root():
@@ -168,3 +186,63 @@ async def chat(chat_message: ChatMessage):
         "retrieved_context_chunks": retrieved_doc_chunks, 
         "llm_response": llm_response_text # This is the key field for the frontend
     }
+
+@app.post("/mcp/context", response_model=MCPContextResponse)
+async def mcp_context(request: MCPContextRequest):
+    """
+    MCP Endpoint to retrieve context chunks based on a user message.
+    """
+    user_message = request.message
+
+    # Check if critical components are available
+    if chromadb_collection is None or generate_query_embedding is None:
+        raise HTTPException(status_code=500, detail="ChromaDB or SentenceTransformer model not initialized. Cannot process context request.")
+
+    # Step 1: Generate embedding for the user's message
+    query_embedding_list = generate_query_embedding([user_message])
+    if not query_embedding_list or not query_embedding_list[0]:
+        raise HTTPException(status_code=500, detail="Failed to generate embedding for the user message.")
+    
+    query_embedding = query_embedding_list[0]
+
+    # Step 2: Query ChromaDB using the embedding to get relevant context
+    retrieved_info = query_collection_with_embedding(
+        query_embedding=query_embedding,
+        n_results=3 # Retrieve the top 3 most relevant document chunks (same as /chat)
+    )
+
+    retrieved_doc_chunks = []
+    if retrieved_info and retrieved_info.get('documents') and retrieved_info['documents'][0]:
+        retrieved_doc_chunks = retrieved_info['documents'][0]
+    
+    print(f"Retrieved {len(retrieved_doc_chunks)} chunks for MCP context query '{user_message}'.")
+
+    return MCPContextResponse(
+        user_query=user_message,
+        retrieved_context_chunks=retrieved_doc_chunks
+    )
+
+@app.post("/mcp/response", response_model=MCPResponseResponse)
+async def mcp_response(request: MCPResponseRequest):
+    """
+    MCP Endpoint to generate an LLM response based on a user query and provided context chunks.
+    """
+    user_query = request.user_query
+    context_chunks = request.context_chunks
+
+    # Check if LLM pipeline is available
+    if llm_pipeline_global is None:
+        print("LLM pipeline is not available for MCP response. Check model loading in llm_generator.py.")
+        raise HTTPException(status_code=500, detail="LLM generation pipeline is not available. Cannot generate response.")
+
+    # Step 3: Generate a response using the LLM with the provided context
+    llm_response_text = generate_response_from_context(
+        query=user_query,
+        context_chunks=context_chunks,
+        max_context_length=1500, # Default based on /chat endpoint
+        max_new_tokens=100       # Default based on /chat endpoint
+    )
+
+    return MCPResponseResponse(
+        llm_response=llm_response_text
+    )
