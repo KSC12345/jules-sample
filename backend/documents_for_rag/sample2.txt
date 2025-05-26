@@ -1,0 +1,4 @@
+The second sample document discusses various aspects of renewable energy.
+Solar power is the conversion of energy from sunlight into electricity.
+Wind power is the use of wind to provide mechanical power through wind turbines to turn electric generators.
+Geothermal energy is thermal energy generated and stored in the Earth.
