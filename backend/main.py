@@ -2,23 +2,49 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 from pydantic import BaseModel # For request and response data modeling
 import os # For operating system dependent functionality, like path joining
+from contextlib import asynccontextmanager # For lifespan events
 
 # Import functionalities from other backend modules
-from backend.vector_store import (
+from vector_store import (
     process_and_embed_documents as process_docs_for_rag, # Renamed for clarity
     query_collection_with_embedding, # For querying with user message embedding
     collection as chromadb_collection, # For checking initialization status
     client as chromadb_client # For checking initialization status
 )
-from backend.document_processor import generate_embeddings as generate_query_embedding # For user messages
+from document_processor import generate_embeddings as generate_query_embedding # For user messages
 # Import the LLM generation function and the pipeline object (to check its status)
-from backend.llm_generator import generate_response_from_context, generator_pipeline as llm_pipeline_global
+from llm_generator import generate_response_from_context, generator_pipeline as llm_pipeline_global
+
+# --- Lifespan Event Handler ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Manages application startup and shutdown events.
+    """
+    # Startup: Check ChromaDB client and collection status
+    if chromadb_client is None or chromadb_collection is None:
+        print("WARNING: ChromaDB client or collection was not initialized at startup.")
+    else:
+        print("FastAPI startup: ChromaDB client and collection appear to be initialized.")
+        print(f"Collection '{chromadb_collection.name}' has {chromadb_collection.count()} items at startup.")
+    
+    # Startup: Check LLM pipeline status
+    if llm_pipeline_global is None:
+        print("WARNING: LLM pipeline was not initialized at startup. LLM generation will not work.")
+    else:
+        print("FastAPI startup: LLM generation pipeline appears to be initialized.")
+    
+    yield # Application runs after this point
+    
+    # Shutdown: (Optional) Add any cleanup code here if needed in the future
+    print("FastAPI shutdown: Application is shutting down.")
 
 # Initialize the FastAPI application instance
 app = FastAPI(
     title="RAG Chatbot Backend",
     description="API for the Retrieval Augmented Generation (RAG) chatbot.",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan # Use the new lifespan context manager
 )
 
 # --- CORS Configuration ---
@@ -48,26 +74,6 @@ class ChatMessage(BaseModel):
 class ProcessRequest(BaseModel):
     """Defines the expected structure for a document processing request."""
     directory: str = "backend/documents_for_rag" # Default directory for processing documents
-
-# --- FastAPI Event Handlers ---
-@app.on_event("startup")
-async def startup_event():
-    """
-    Actions to perform when the FastAPI application starts up.
-    This includes checking the initialization status of critical components.
-    """
-    # Check ChromaDB client and collection status
-    if chromadb_client is None or chromadb_collection is None:
-        print("WARNING: ChromaDB client or collection was not initialized at startup.")
-    else:
-        print("FastAPI startup: ChromaDB client and collection appear to be initialized.")
-        print(f"Collection '{chromadb_collection.name}' has {chromadb_collection.count()} items at startup.")
-    
-    # Check LLM pipeline status
-    if llm_pipeline_global is None:
-        print("WARNING: LLM pipeline was not initialized at startup. LLM generation will not work.")
-    else:
-        print("FastAPI startup: LLM generation pipeline appears to be initialized.")
 
 # --- API Endpoints ---
 @app.get("/")

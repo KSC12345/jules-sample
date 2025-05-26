@@ -6,12 +6,12 @@ from unittest.mock import patch, MagicMock
 # Add parent directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.llm_generator import generate_response_from_context
+from llm_generator import generate_response_from_context
 
 # Mock the global pipeline and tokenizer variables in llm_generator
-# Patch 'backend.llm_generator.generator_pipeline' and 'backend.llm_generator.tokenizer'
-@patch('backend.llm_generator.generator_pipeline')
-@patch('backend.llm_generator.tokenizer')
+# Patch 'llm_generator.generator_pipeline' and 'llm_generator.tokenizer'
+@patch('llm_generator.generator_pipeline')
+@patch('llm_generator.tokenizer')
 def test_generate_response_with_context(MockTokenizer, MockPipeline):
     # Configure the mock pipeline
     # Simulate the pipeline returning a dictionary (or list of dicts)
@@ -29,7 +29,7 @@ def test_generate_response_with_context(MockTokenizer, MockPipeline):
 
     # Re-assign the global variables in llm_generator to our mocks for this test
     # This is essential because the function generate_response_from_context uses these globals.
-    import backend.llm_generator as lg
+    import llm_generator as lg
     original_pipeline = lg.generator_pipeline
     original_tokenizer = lg.tokenizer
     lg.generator_pipeline = MockPipeline
@@ -57,8 +57,8 @@ def test_generate_response_with_context(MockTokenizer, MockPipeline):
     lg.tokenizer = original_tokenizer
 
 
-@patch('backend.llm_generator.generator_pipeline')
-@patch('backend.llm_generator.tokenizer')
+@patch('llm_generator.generator_pipeline')
+@patch('llm_generator.tokenizer')
 def test_generate_response_no_context(MockTokenizer, MockPipeline):
     mock_generated_output = [{"generated_text": "Question: Test query no context\nAnswer: Mock answer for no context."}]
     MockPipeline.return_value = mock_generated_output
@@ -69,7 +69,7 @@ def test_generate_response_no_context(MockTokenizer, MockPipeline):
     mock_tokenizer_instance.encode.return_value = [1,2,3]
     MockTokenizer = mock_tokenizer_instance
 
-    import backend.llm_generator as lg
+    import llm_generator as lg
     original_pipeline = lg.generator_pipeline
     original_tokenizer = lg.tokenizer
     lg.generator_pipeline = MockPipeline
@@ -89,7 +89,7 @@ def test_generate_response_no_context(MockTokenizer, MockPipeline):
     lg.tokenizer = original_tokenizer
 
 
-@patch('backend.llm_generator.generator_pipeline', None) # Simulate pipeline not loaded
+@patch('llm_generator.generator_pipeline', None) # Simulate pipeline not loaded
 def test_generate_response_pipeline_not_available():
     query = "Test query"
     context_chunks = ["Test context."]
@@ -97,8 +97,8 @@ def test_generate_response_pipeline_not_available():
     assert "Error: Text generation pipeline is not available" in response
 
 
-@patch('backend.llm_generator.generator_pipeline')
-@patch('backend.llm_generator.tokenizer')
+@patch('llm_generator.generator_pipeline')
+@patch('llm_generator.tokenizer')
 def test_generate_response_long_context_truncation(MockTokenizer, MockPipeline):
     mock_generated_output = [{"generated_text": "Context: Shortened context...\nQuestion: Test query\nAnswer: Mock response for truncated."}]
     MockPipeline.return_value = mock_generated_output
@@ -109,7 +109,7 @@ def test_generate_response_long_context_truncation(MockTokenizer, MockPipeline):
     mock_tokenizer_instance.encode.return_value = [1,2,3]
     MockTokenizer = mock_tokenizer_instance
     
-    import backend.llm_generator as lg
+    import llm_generator as lg
     original_pipeline = lg.generator_pipeline
     original_tokenizer = lg.tokenizer
     lg.generator_pipeline = MockPipeline

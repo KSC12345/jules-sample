@@ -5,7 +5,7 @@ import sys
 # Add the parent directory (/app) to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.document_processor import load_txt, chunk_text, generate_embeddings
+from document_processor import load_txt, chunk_text, generate_embeddings
 from unittest.mock import patch, MagicMock
 
 # Define the path to the sample document for testing
@@ -86,7 +86,7 @@ def test_chunk_text_empty_text():
 
 # Mocking SentenceTransformer for generate_embeddings
 # The actual model loading will likely fail in the constrained environment.
-@patch('backend.document_processor.SentenceTransformer')
+@patch('document_processor.SentenceTransformer')
 def test_generate_embeddings_mocked(MockSentenceTransformer):
     # Configure the mock model and its encode method
     mock_model_instance = MagicMock()
@@ -104,7 +104,7 @@ def test_generate_embeddings_mocked(MockSentenceTransformer):
     
     # To ensure the mock is used, we can temporarily set the global 'model' in document_processor
     # This is quite intrusive and generally not recommended, but module-level globals are hard to mock per-test.
-    import backend.document_processor as dp
+    import document_processor as dp
     original_model = dp.model
     dp.model = mock_model_instance # Force use our mock
 
@@ -118,7 +118,7 @@ def test_generate_embeddings_mocked(MockSentenceTransformer):
 
     dp.model = original_model # Restore original model
 
-@patch('backend.document_processor.model', None) # Simulate model not loaded
+@patch('document_processor.model', None) # Simulate model not loaded
 def test_generate_embeddings_model_not_loaded():
     chunks = ["test chunk"]
     embeddings = generate_embeddings(chunks)

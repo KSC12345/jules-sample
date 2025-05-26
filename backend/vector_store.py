@@ -1,7 +1,7 @@
 import os # For file system operations like path joining and checking existence.
 import chromadb # The ChromaDB client library for vector storage and retrieval.
 # Import functions from document_processor.py for loading, chunking, and embedding text.
-from backend.document_processor import load_txt, load_pdf, load_docx, chunk_text, generate_embeddings
+from document_processor import load_txt, load_pdf, load_docx, chunk_text, generate_embeddings
 
 # --- ChromaDB Client and Collection Initialization ---
 # Attempt to initialize the ChromaDB client and get or create a collection.

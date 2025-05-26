@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, call
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Module to be tested
-import backend.vector_store as vs
+import vector_store as vs
 
 # Mock the global chromadb client and collection in vector_store.py
 # This allows us to control their behavior during tests without a live DB.
@@ -62,7 +62,7 @@ def test_add_embeddings_to_collection_mismatch_lengths():
     assert result is False
     mock_chroma_collection.add.assert_not_called()
 
-@patch('backend.vector_store.collection', None) # Simulate collection not initialized
+@patch('vector_store.collection', None) # Simulate collection not initialized
 def test_add_embeddings_to_collection_no_collection():
     result = vs.add_embeddings_to_collection(["id1"], ["text1"], [[0.1]], [{"s":1}])
     assert result is False
@@ -84,7 +84,7 @@ def test_query_collection_with_embedding_success():
         include=['documents', 'metadatas', 'distances']
     )
 
-@patch('backend.vector_store.collection', None)
+@patch('vector_store.collection', None)
 def test_query_collection_with_embedding_no_collection():
     results = vs.query_collection_with_embedding([0.1], n_results=1)
     assert results is None
@@ -98,12 +98,12 @@ def test_query_collection_with_embedding_empty_embedding():
 # --- Tests for process_and_embed_documents ---
 # These are more like integration tests for this module.
 # We need to mock document_processor functions.
-@patch('backend.vector_store.load_txt')
-@patch('backend.vector_store.load_pdf') # Mock even if not directly testing PDF
-@patch('backend.vector_store.load_docx') # Mock even if not directly testing DOCX
-@patch('backend.vector_store.chunk_text')
-@patch('backend.vector_store.generate_embeddings')
-@patch('backend.vector_store.add_embeddings_to_collection') # Mock the function within vector_store itself
+@patch('vector_store.load_txt')
+@patch('vector_store.load_pdf') # Mock even if not directly testing PDF
+@patch('vector_store.load_docx') # Mock even if not directly testing DOCX
+@patch('vector_store.chunk_text')
+@patch('vector_store.generate_embeddings')
+@patch('vector_store.add_embeddings_to_collection') # Mock the function within vector_store itself
 @patch('os.listdir')
 @patch('os.path.join', side_effect=lambda *args: "/".join(args)) # Simple mock for os.path.join
 @patch('os.path.isdir')
@@ -149,7 +149,7 @@ def test_process_and_embed_documents_txt_file(
         expected_metadatas
     )
 
-@patch('backend.vector_store.collection', None) # Simulate collection not initialized
+@patch('vector_store.collection', None) # Simulate collection not initialized
 def test_process_and_embed_documents_no_collection():
     result = vs.process_and_embed_documents()
     assert result["status"] == "error"

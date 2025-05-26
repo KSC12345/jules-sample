@@ -5,15 +5,15 @@ from unittest.mock import patch, AsyncMock, MagicMock
 
 # Ensure the app can be imported. This might require adjusting PYTHONPATH if tests are run from outside /app/backend
 # For now, assume tests are run from /app/backend or PYTHONPATH is set.
-# If backend.main is not found, one solution is to add /app to sys.path in tests.
+# If main is not found, one solution is to add /app to sys.path in tests.
 import sys
 import os
 
-# Add the parent directory (/app) to sys.path to allow imports like 'from backend.main import app'
+# Add the parent directory (/app) to sys.path to allow imports like 'from main import app'
 # This is often necessary when running tests from a subdirectory like /app/backend/tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.main import app # FastAPI app instance
+from main import app # FastAPI app instance
 
 # Base URL for the test client
 BASE_URL = "http://test"
@@ -31,7 +31,7 @@ async def test_read_root(client: AsyncClient):
     assert response.json() == {"message": "Welcome to the RAG chatbot backend!"}
 
 @pytest.mark.asyncio
-@patch('backend.main.process_docs_for_rag', new_callable=AsyncMock) # Mock the actual processing function
+@patch('main.process_docs_for_rag', new_callable=AsyncMock) # Mock the actual processing function
 async def test_process_documents_endpoint_success(mock_process_docs: AsyncMock, client: AsyncClient):
     # Configure the mock to return a successful-like response
     mock_process_docs.return_value = {
@@ -62,12 +62,12 @@ async def test_process_documents_endpoint_dir_not_found(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-@patch('backend.main.generate_query_embedding')
-@patch('backend.main.query_collection_with_embedding')
-@patch('backend.main.generate_response_from_context')
-@patch('backend.main.llm_pipeline_global', new_callable=MagicMock) # Mock the pipeline object itself
-@patch('backend.main.chromadb_collection', new_callable=MagicMock) # Mock chromadb_collection
-@patch('backend.main.generate_query_embedding_module', new_callable=MagicMock) # Mock document_processor.generate_embeddings
+@patch('main.generate_query_embedding')
+@patch('main.query_collection_with_embedding')
+@patch('main.generate_response_from_context')
+@patch('main.llm_pipeline_global', new_callable=MagicMock) # Mock the pipeline object itself
+@patch('main.chromadb_collection', new_callable=MagicMock) # Mock chromadb_collection
+@patch('main.generate_query_embedding_module', new_callable=MagicMock) # Mock document_processor.generate_embeddings
 async def test_chat_endpoint_success(
     mock_gen_query_embed_module: MagicMock, # This is for the check generate_query_embedding is None
     mock_chromadb_collection: MagicMock,
@@ -79,12 +79,12 @@ async def test_chat_endpoint_success(
 ):
     # Ensure mocked checks for initialization pass
     # The generate_query_embedding in main.py is an alias, 
-    # so we mock what it points to: backend.document_processor.generate_embeddings
+    # so we mock what it points to: document_processor.generate_embeddings
     # For the check "if chromadb_collection is None or generate_query_embedding is None:"
     # We need to make sure these are not None.
-    # The @patch for 'backend.main.generate_query_embedding' handles the aliased name.
+    # The @patch for 'main.generate_query_embedding' handles the aliased name.
     # So, we need to ensure the check "if llm_pipeline_global is None" passes.
-    # The patch for 'backend.main.llm_pipeline_global' already ensures it's a MagicMock (not None).
+    # The patch for 'main.llm_pipeline_global' already ensures it's a MagicMock (not None).
     # Same for chromadb_collection.
     
     # Configure mock return values
@@ -118,9 +118,9 @@ async def test_chat_endpoint_success(
     )
 
 @pytest.mark.asyncio
-@patch('backend.main.llm_pipeline_global', None) # Simulate LLM pipeline not loaded
-@patch('backend.main.chromadb_collection', new_callable=MagicMock)
-@patch('backend.main.generate_query_embedding', new_callable=MagicMock)
+@patch('main.llm_pipeline_global', None) # Simulate LLM pipeline not loaded
+@patch('main.chromadb_collection', new_callable=MagicMock)
+@patch('main.generate_query_embedding', new_callable=MagicMock)
 async def test_chat_endpoint_llm_not_loaded(
     mock_generate_query_embed: MagicMock,
     mock_chromadb_collection: MagicMock,
@@ -134,8 +134,8 @@ async def test_chat_endpoint_llm_not_loaded(
     assert "LLM generation pipeline is not available" in response.json()["detail"]
 
 @pytest.mark.asyncio
-@patch('backend.main.chromadb_collection', None) # Simulate ChromaDB not initialized
-@patch('backend.main.generate_query_embedding', new_callable=MagicMock) # Mock generate_query_embedding
+@patch('main.chromadb_collection', None) # Simulate ChromaDB not initialized
+@patch('main.generate_query_embedding', new_callable=MagicMock) # Mock generate_query_embedding
 async def test_chat_endpoint_chromadb_not_loaded(
     mock_generate_query_embedding: MagicMock,
     client: AsyncClient):
