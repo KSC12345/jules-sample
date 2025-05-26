@@ -1,0 +1,4 @@
+The quick brown fox jumps over the lazy dog.
+This is the first sample document. It contains basic information about animals.
+Foxes are omnivorous mammals belonging to several genera of the family Canidae.
+Dogs are domesticated mammals, not natural wild animals. They were originally bred from wolves.

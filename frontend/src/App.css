@@ -1,0 +1,170 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  background-color: #f0f2f5; /* Lighter grey background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #333; /* Default text color */
+}
+
+.App {
+  background-color: #ffffff; /* White app background */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Softer shadow */
+  width: 500px; /* Slightly wider */
+  max-width: 95%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column; /* Ensure header, chat, input are stacked */
+  height: calc(100vh - 40px); /* Make it take most of the screen height */
+  max-height: 700px; /* Max height */
+}
+
+.App-header {
+  background-color: #007bff; /* Primary blue */
+  color: white;
+  padding: 16px 20px; /* More padding */
+  text-align: center;
+  border-bottom: 1px solid #0069d9; /* Darker blue border */
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 1.6em; /* Larger title */
+}
+
+.chat-window {
+  padding: 20px; /* More padding */
+  height: 100%; /* Take available space */
+  overflow-y: auto;
+  border-bottom: 1px solid #e0e0e0; /* Lighter border */
+  flex-grow: 1; /* Allow chat window to grow */
+}
+
+/* Container for each message to help with alignment */
+.message-container {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.message-container.user {
+  justify-content: flex-end; /* Align user messages to the right */
+}
+
+.message-container.bot,
+.message-container.error {
+  justify-content: flex-start; /* Align bot/error messages to the left */
+}
+
+.message {
+  padding: 10px 15px; /* Comfortable padding */
+  border-radius: 18px; /* More rounded */
+  max-width: 75%; /* Max width for messages */
+  word-wrap: break-word;
+  line-height: 1.4; /* Better readability */
+}
+
+.message.user {
+  background-color: #007bff; /* Primary blue for user */
+  color: white;
+  border-bottom-right-radius: 5px; /* Differentiate user bubble shape */
+}
+
+.message.bot {
+  background-color: #e9ecef; /* Light grey for bot */
+  color: #212529; /* Darker text for bot messages */
+  border-bottom-left-radius: 5px; /* Differentiate bot bubble shape */
+}
+
+.message.error {
+  background-color: #ffebee; /* Light red for errors */
+  color: #c62828; /* Darker red text for errors */
+  border: 1px solid #f44336;
+}
+
+.message p {
+  margin: 0;
+}
+
+.typing-indicator p {
+  font-style: italic;
+  color: #555;
+}
+
+.retrieved-chunks {
+  margin-top: 8px;
+  font-size: 0.8em;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 5px 8px;
+  border-radius: 5px;
+}
+.retrieved-chunks summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #555;
+}
+.retrieved-chunks ul {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-top: 5px;
+  color: #666;
+}
+.retrieved-chunks li {
+  margin-bottom: 3px;
+}
+
+
+.input-area {
+  display: flex;
+  padding: 15px 20px; /* More padding */
+  border-top: 1px solid #e0e0e0; /* Lighter border */
+  background-color: #f8f9fa; /* Light background for input area */
+}
+
+.input-area input {
+  flex-grow: 1;
+  padding: 12px 15px; /* More padding */
+  border: 1px solid #ced4da; /* Standard border color */
+  border-radius: 20px;
+  margin-right: 10px;
+  font-size: 1em;
+}
+
+.input-area input:focus {
+  outline: none;
+  border-color: #007bff; /* Blue border on focus */
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Blue glow on focus */
+}
+
+.input-area input:disabled {
+  background-color: #e9ecef; /* Grey out when disabled */
+}
+
+.input-area button {
+  background-color: #007bff; /* Primary blue for button */
+  color: white;
+  border: none;
+  padding: 12px 20px; /* More padding */
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s ease; /* Smooth transition */
+}
+
+.input-area button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+.input-area button:disabled {
+  background-color: #6c757d; /* Grey when disabled */
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #c62828; /* Dark red text for errors */
+  padding: 0px 20px 10px; /* Padding for global error message below chat window */
+  text-align: center;
+  font-size: 0.9em;
+}

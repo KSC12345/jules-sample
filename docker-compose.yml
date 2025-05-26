@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data_volume:/app/chroma_data # Persist ChromaDB data
+      # Optional: Mount local code for development (uncomment if needed)
+      # - ./backend:/app 
+    container_name: rag_chatbot_backend
+    environment:
+      # Add any environment variables your backend needs
+      # Example: PYTHONUNBUFFERED: 1 (already in Dockerfile)
+      #          LOG_LEVEL: info
+      # Ensure ChromaDB path in vector_store.py matches the volume mount if it's made configurable
+      CHROMA_DB_PATH: /app/chroma_data 
+    # Healthcheck (optional, but good practice)
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80" # Map host port 3000 to container port 80 (Nginx default)
+    container_name: rag_chatbot_frontend
+    depends_on:
+      - backend # Ensure backend starts before frontend (for API calls)
+    # No volumes needed for frontend in production, as it serves static files.
+    # For development, you might mount src, but build is separate.
+
+volumes:
+  chroma_data_volume: # Define the named volume for ChromaDB persistence
+    driver: local # Default, can be omitted. Specifies local storage.
