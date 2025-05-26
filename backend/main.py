@@ -3,8 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 from pydantic import BaseModel # For request and response data modeling
 import os # For operating system dependent functionality, like path joining
 from contextlib import asynccontextmanager # For lifespan events
+import threading # For running gRPC server in a separate thread
 
 # Import functionalities from other backend modules
+# Attempt to import gRPC server components
+try:
+    from .mcp_server import serve as run_grpc_server
+    # Also ensure mcp_server components are loaded for gRPC side
+    from .mcp_server import MCPServiceServicer # To ensure it's loaded by main thread context too
+except ImportError:
+    print("WARNING: mcp_server could not be imported. gRPC server will not start.")
+    run_grpc_server = None
+    MCPServiceServicer = None # Or some placeholder
+
 from vector_store import (
     process_and_embed_documents as process_docs_for_rag, # Renamed for clarity
     query_collection_with_embedding, # For querying with user message embedding
@@ -21,23 +32,37 @@ async def lifespan(app: FastAPI):
     """
     Manages application startup and shutdown events.
     """
-    # Startup: Check ChromaDB client and collection status
+    # Startup: Check ChromaDB client and collection status (existing code)
     if chromadb_client is None or chromadb_collection is None:
         print("WARNING: ChromaDB client or collection was not initialized at startup.")
     else:
         print("FastAPI startup: ChromaDB client and collection appear to be initialized.")
         print(f"Collection '{chromadb_collection.name}' has {chromadb_collection.count()} items at startup.")
     
-    # Startup: Check LLM pipeline status
+    # Startup: Check LLM pipeline status (existing code)
     if llm_pipeline_global is None:
-        print("WARNING: LLM pipeline was not initialized at startup. LLM generation will not work.")
+        print("WARNING: LLM pipeline was not initialized at startup. LLM generation will not work for FastAPI.")
     else:
-        print("FastAPI startup: LLM generation pipeline appears to be initialized.")
+        print("FastAPI startup: LLM generation pipeline appears to be initialized for FastAPI.")
+
+    # Startup: Start gRPC server in a separate thread
+    grpc_server_thread = None
+    if run_grpc_server:
+        print("FastAPI startup: Attempting to start gRPC server...")
+        grpc_server_thread = threading.Thread(target=run_grpc_server, daemon=True)
+        grpc_server_thread.start()
+        print("FastAPI startup: gRPC server thread started.")
+    else:
+        print("FastAPI startup: gRPC server not started due to import issues (run_grpc_server is None).")
     
     yield # Application runs after this point
     
     # Shutdown: (Optional) Add any cleanup code here if needed in the future
     print("FastAPI shutdown: Application is shutting down.")
+    # gRPC server thread is a daemon, so it will shut down automatically.
+    # If a graceful shutdown for gRPC is needed, it would be more complex
+    # and require access to the gRPC server object to call server.stop().
+    # The mcp_server.py's serve() function has a finally block with server.stop(0).
 
 # Initialize the FastAPI application instance
 app = FastAPI(

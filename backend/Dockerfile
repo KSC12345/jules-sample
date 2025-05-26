@@ -30,6 +30,13 @@ COPY . .
 # Expose port 8000 for the FastAPI application
 EXPOSE 8000
 
+# Add new environment variables
+ENV RUNNING_IN_DOCKER=true
+ENV APP_BASE_PATH=/app
+
+# Expose gRPC port (FastAPI port 8000 should already be exposed)
+EXPOSE 50051
+
 # Command to run the application using Uvicorn
 # The --host 0.0.0.0 makes it accessible from outside the container
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

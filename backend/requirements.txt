@@ -28,3 +28,7 @@ python-docx==1.1.2
 
 # For uvicorn[standard] - it includes httptools, websockets, python-dotenv, uvloop, watchfiles
 # These will be handled by the [standard] extra.
+
+# gRPC dependencies
+grpcio>=1.50.0,<2.0.0
+grpcio-tools>=1.50.0,<2.0.0

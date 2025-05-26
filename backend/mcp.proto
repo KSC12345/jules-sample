@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package mcp;
+
+// Service definition for Model Context Protocol
+service MCPService {
+  // RPC for chat functionality
+  rpc Chat(MCPChatMessage) returns (MCPChatResponse);
+  // RPC for document processing functionality
+  rpc ProcessDocuments(MCPProcessRequest) returns (MCPProcessResponse);
+}
+
+// Message for chat requests, similar to Pydantic's ChatMessage
+message MCPChatMessage {
+  string message = 1;
+}
+
+// Message for chat responses
+message MCPChatResponse {
+  string user_query = 1;
+  repeated string retrieved_context_chunks = 2;
+  string llm_response = 3;
+}
+
+// Message for document processing requests, similar to Pydantic's ProcessRequest
+message MCPProcessRequest {
+  string directory = 1; // Directory containing documents to process
+}
+
+// Message for document processing responses
+message MCPProcessResponse {
+  string message = 1;       // Confirmation or error message
+  string status = 2;        // "success" or "error"
+  int32 processed_files = 3;
+  int32 total_chunks_added = 4;
+  int32 collection_total_items = 5; // Total items in the vector store collection after processing
+}
