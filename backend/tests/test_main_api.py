@@ -147,128 +147,145 @@ async def test_chat_endpoint_chromadb_not_loaded(
     assert "ChromaDB or SentenceTransformer model not initialized" in response.json()["detail"]
 
 
-# --- Tests for /mcp/context ---
+# --- Tests for /mcp/chat ---
 
 @pytest.mark.asyncio
 @patch('main.generate_query_embedding')
 @patch('main.query_collection_with_embedding')
-@patch('main.chromadb_collection', new_callable=MagicMock) # Ensure it's not None
-async def test_mcp_context_success(
+@patch('main.generate_response_from_context')
+@patch('main.llm_pipeline_global', new_callable=MagicMock)
+@patch('main.chromadb_collection', new_callable=MagicMock)
+async def test_mcp_chat_success(
     mock_chromadb_collection: MagicMock,
+    mock_llm_pipeline: MagicMock,
+    mock_generate_response: MagicMock,
     mock_query_chroma: MagicMock,
     mock_generate_query_embed: MagicMock,
     client: AsyncClient
 ):
     # Configure mock return values
     mock_generate_query_embed.return_value = [[0.1, 0.2, 0.3]] # Sample embedding
-    mock_query_chroma.return_value = { # Sample response from ChromaDB query
-        "documents": [["context chunk 1", "context chunk 2"]],
-        # Other fields like metadatas, distances can be included if the endpoint uses them
+    mock_query_chroma.return_value = {
+        "documents": [["mcp_chunk1 text", "mcp_chunk2 text"]],
+        "metadatas": [[{"source": "doc1"}, {"source": "doc2"}]],
+        "distances": [[0.5, 0.6]]
     }
+    mock_generate_response.return_value = "This is a mock MCP LLM response."
 
-    request_data = {"message": "What is MCP?"}
-    response = await client.post("/mcp/context", json=request_data)
+    # Make the POST request
+    mcp_chat_message = {"message": "Hello, MCP!"}
+    response = await client.post("/mcp/chat", json=mcp_chat_message)
 
+    # Assertions
     assert response.status_code == 200
     json_response = response.json()
-    assert json_response["user_query"] == request_data["message"]
-    assert json_response["retrieved_context_chunks"] == ["context chunk 1", "context chunk 2"]
-    mock_generate_query_embed.assert_called_once_with([request_data["message"]])
+    assert json_response["user_query"] == mcp_chat_message["message"]
+    assert json_response["retrieved_context_chunks"] == ["mcp_chunk1 text", "mcp_chunk2 text"]
+    assert json_response["llm_response"] == "This is a mock MCP LLM response."
+
+    # Verify that mocked functions were called
+    mock_generate_query_embed.assert_called_once_with([mcp_chat_message["message"]])
     mock_query_chroma.assert_called_once_with(query_embedding=[0.1, 0.2, 0.3], n_results=3)
-
-@pytest.mark.asyncio
-@patch('main.generate_query_embedding')
-@patch('main.query_collection_with_embedding')
-@patch('main.chromadb_collection', new_callable=MagicMock) # Ensure it's not None
-async def test_mcp_context_no_chunks_found(
-    mock_chromadb_collection: MagicMock,
-    mock_query_chroma: MagicMock,
-    mock_generate_query_embed: MagicMock,
-    client: AsyncClient
-):
-    mock_generate_query_embed.return_value = [[0.4, 0.5, 0.6]]
-    mock_query_chroma.return_value = {"documents": [[]]} # No documents found
-
-    request_data = {"message": "Tell me about an unknown topic."}
-    response = await client.post("/mcp/context", json=request_data)
-
-    assert response.status_code == 200
-    json_response = response.json()
-    assert json_response["user_query"] == request_data["message"]
-    assert json_response["retrieved_context_chunks"] == []
-    mock_generate_query_embed.assert_called_once_with([request_data["message"]])
-    mock_query_chroma.assert_called_once_with(query_embedding=[0.4, 0.5, 0.6], n_results=3)
-
-@pytest.mark.asyncio
-@patch('main.generate_query_embedding', None) # Simulate embedding model not loaded
-@patch('main.chromadb_collection', new_callable=MagicMock) # Ensure it's not None
-async def test_mcp_context_embedding_model_not_loaded(
-    mock_chromadb_collection: MagicMock,
-    client: AsyncClient
-):
-    request_data = {"message": "This should fail."}
-    response = await client.post("/mcp/context", json=request_data)
-
-    assert response.status_code == 500
-    assert "ChromaDB or SentenceTransformer model not initialized" in response.json()["detail"]
-
-@pytest.mark.asyncio
-@patch('main.chromadb_collection', None) # Simulate ChromaDB not initialized
-@patch('main.generate_query_embedding', new_callable=MagicMock) # Mock to avoid None check failure there
-async def test_mcp_context_chromadb_not_loaded(
-    mock_generate_query_embed: MagicMock,
-    client: AsyncClient
-):
-    request_data = {"message": "This should also fail."}
-    response = await client.post("/mcp/context", json=request_data)
-
-    assert response.status_code == 500
-    assert "ChromaDB or SentenceTransformer model not initialized" in response.json()["detail"]
-
-
-# --- Tests for /mcp/response ---
-
-@pytest.mark.asyncio
-@patch('main.generate_response_from_context')
-@patch('main.llm_pipeline_global', new_callable=MagicMock) # Ensure LLM pipeline is not None
-async def test_mcp_response_success(
-    mock_llm_pipeline: MagicMock,
-    mock_generate_response: MagicMock,
-    client: AsyncClient
-):
-    mock_llm_response_text = "This is the LLM's answer based on provided context."
-    mock_generate_response.return_value = mock_llm_response_text
-
-    request_data = {
-        "user_query": "What is the capital of France?",
-        "context_chunks": ["France is a country in Europe.", "Its capital is Paris."]
-    }
-    response = await client.post("/mcp/response", json=request_data)
-
-    assert response.status_code == 200
-    json_response = response.json()
-    assert json_response["llm_response"] == mock_llm_response_text
     mock_generate_response.assert_called_once_with(
-        query=request_data["user_query"],
-        context_chunks=request_data["context_chunks"],
+        query=mcp_chat_message["message"],
+        context_chunks=["mcp_chunk1 text", "mcp_chunk2 text"],
         max_context_length=1500,
         max_new_tokens=100
     )
 
 @pytest.mark.asyncio
-@patch('main.llm_pipeline_global', None) # Simulate LLM pipeline not loaded
-async def test_mcp_response_llm_not_loaded(
+@patch('main.generate_query_embedding', None) # Simulate embedding model not loaded
+@patch('main.chromadb_collection', new_callable=MagicMock) # Mock chromadb_collection to be present
+@patch('main.llm_pipeline_global', new_callable=MagicMock) # Mock llm_pipeline_global to be present
+async def test_mcp_chat_embedding_model_not_loaded(
+    mock_llm_pipeline: MagicMock,
+    mock_chromadb_collection: MagicMock,
     client: AsyncClient
 ):
-    request_data = {
-        "user_query": "This request will fail.",
-        "context_chunks": ["Some context."]
-    }
-    response = await client.post("/mcp/response", json=request_data)
+    mcp_chat_message = {"message": "Test message for embedding failure"}
+    response = await client.post("/mcp/chat", json=mcp_chat_message)
+    
+    assert response.status_code == 500
+    # The error message in main.py for /mcp/chat is "ChromaDB or SentenceTransformer model not initialized. Cannot process MCP chat."
+    assert "ChromaDB or SentenceTransformer model not initialized" in response.json()["detail"]
+    assert "Cannot process MCP chat" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+@patch('main.chromadb_collection', None) # Simulate ChromaDB not initialized
+@patch('main.generate_query_embedding', new_callable=MagicMock) # Mock generate_query_embedding to be present
+@patch('main.llm_pipeline_global', new_callable=MagicMock) # Mock llm_pipeline_global to be present
+async def test_mcp_chat_chromadb_not_loaded(
+    mock_llm_pipeline: MagicMock,
+    mock_generate_query_embedding: MagicMock,
+    client: AsyncClient
+):
+    mcp_chat_message = {"message": "Test message for chromadb failure"}
+    response = await client.post("/mcp/chat", json=mcp_chat_message)
 
     assert response.status_code == 500
-    assert "LLM generation pipeline is not available" in response.json()["detail"]
+    # The error message in main.py for /mcp/chat is "ChromaDB or SentenceTransformer model not initialized. Cannot process MCP chat."
+    assert "ChromaDB or SentenceTransformer model not initialized" in response.json()["detail"]
+    assert "Cannot process MCP chat" in response.json()["detail"]
 
+
+@pytest.mark.asyncio
+@patch('main.llm_pipeline_global', None) # Simulate LLM pipeline not loaded
+@patch('main.chromadb_collection', new_callable=MagicMock) # Mock chromadb_collection to be present
+@patch('main.generate_query_embedding', new_callable=MagicMock) # Mock generate_query_embedding to be present
+async def test_mcp_chat_llm_not_loaded(
+    mock_generate_query_embedding: MagicMock,
+    mock_chromadb_collection: MagicMock,
+    client: AsyncClient
+):
+    # Configure generate_query_embedding to return a valid embedding to pass that stage
+    mock_generate_query_embedding.return_value = [[0.1, 0.2, 0.3]]
+    
+    mcp_chat_message = {"message": "Test message for LLM failure"}
+    response = await client.post("/mcp/chat", json=mcp_chat_message)
+    
+    assert response.status_code == 500
+    # The error message in main.py for /mcp/chat is "LLM generation pipeline is not available. Cannot generate MCP response."
+    assert "LLM generation pipeline is not available" in response.json()["detail"]
+    assert "Cannot generate MCP response" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+@patch('main.generate_query_embedding')
+@patch('main.query_collection_with_embedding')
+@patch('main.generate_response_from_context')
+@patch('main.llm_pipeline_global', new_callable=MagicMock)
+@patch('main.chromadb_collection', new_callable=MagicMock)
+async def test_mcp_chat_no_chunks_found(
+    mock_chromadb_collection: MagicMock,
+    mock_llm_pipeline: MagicMock,
+    mock_generate_response: MagicMock,
+    mock_query_chroma: MagicMock,
+    mock_generate_query_embed: MagicMock,
+    client: AsyncClient
+):
+    # Configure mock return values
+    mock_generate_query_embed.return_value = [[0.1, 0.2, 0.3]]
+    mock_query_chroma.return_value = {"documents": [[]]} # No documents found
+    mock_generate_response.return_value = "This is a mock MCP LLM response even with no chunks."
+
+    mcp_chat_message = {"message": "Query for no chunks"}
+    response = await client.post("/mcp/chat", json=mcp_chat_message)
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["user_query"] == mcp_chat_message["message"]
+    assert json_response["retrieved_context_chunks"] == []
+    assert json_response["llm_response"] == "This is a mock MCP LLM response even with no chunks."
+
+    mock_generate_query_embed.assert_called_once_with([mcp_chat_message["message"]])
+    mock_query_chroma.assert_called_once_with(query_embedding=[0.1, 0.2, 0.3], n_results=3)
+    mock_generate_response.assert_called_once_with(
+        query=mcp_chat_message["message"],
+        context_chunks=[], # Empty list for context
+        max_context_length=1500,
+        max_new_tokens=100
+    )
 
 # To run these tests, navigate to the /app/backend directory and run:
 # python -m pytest

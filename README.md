@@ -18,14 +18,9 @@ This project provides a backend API for a RAG (Retrieval Augmented Generation) c
 
 ### MCP API Endpoints (Manual Context Passthrough)
 
-These endpoints allow for more granular control over the RAG process, separating context retrieval and response generation.
+This section describes endpoints that offer a similar chat experience to `/chat` but are designated under the "MCP" (Manual Context Passthrough) path. Initially, MCP involved separate steps for context retrieval and response generation, but this has been consolidated into a single endpoint.
 
-*   **`POST /mcp/context`**:
-    *   **Description**: Takes a user message and retrieves relevant context chunks from the RAG system's vector store.
-    *   **Request Body**: `{ "message": "Your query to find context for" }`
-    *   **Response Body**: `{ "user_query": "Your query...", "retrieved_context_chunks": ["context chunk 1", "context chunk 2", ...] }`
-
-*   **`POST /mcp/response`**:
-    *   **Description**: Takes a user query and a list of context chunks, then generates a response using the RAG system's Language Model (LLM).
-    *   **Request Body**: `{ "user_query": "Your original query", "context_chunks": ["previously retrieved context chunk 1", "chunk 2"] }`
-    *   **Response Body**: `{ "llm_response": "The LLM's generated answer" }`
+*   **`POST /mcp/chat`**:
+    *   **Description**: Takes a user's message, performs context retrieval from the RAG system's vector store, and then generates a response using the Language Model (LLM) based on the user's query and the retrieved context. This endpoint mirrors the functionality of the main `/chat` endpoint.
+    *   **Request Body**: `{ "message": "Your question for the MCP chat" }`
+    *   **Response Body**: `{ "user_query": "Your question...", "retrieved_context_chunks": ["retrieved context chunk 1", "..."], "llm_response": "The LLM's generated answer" }`
