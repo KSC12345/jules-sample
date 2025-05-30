@@ -1,23 +1,10 @@
 import os # For interacting with the file system, e.g., path operations.
-from sentence_transformers import SentenceTransformer # For generating text embeddings.
+# SentenceTransformer will be initialized in vector_store.py using config
 from PyPDF2 import PdfReader # For extracting text from PDF files.
 from docx import Document as DocxDocument # For extracting text from .docx files.
+import glob # For finding files matching a pattern
 
-# --- Sentence Transformer Model Initialization ---
-# Load a pre-trained sentence transformer model.
-# This model will be used to convert text chunks into numerical embeddings.
-# 'all-MiniLM-L6-v2' is a good starting model: fast and relatively small, with decent performance.
-# The model is loaded once when this module is imported to avoid reloading on each use.
-# This will download the model from Hugging Face Hub on first use if not already cached.
-try:
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("SentenceTransformer model 'all-MiniLM-L6-v2' loaded successfully.")
-except Exception as e:
-    # If model loading fails (e.g., network issue, resource constraints), print an error
-    # and set the model to None. Functions relying on the model should handle this.
-    print(f"Error loading SentenceTransformer model: {e}")
-    print("Embedding generation will not be available.")
-    model = None
+from . import config # Import config for accessing directory paths
 
 # --- Document Loading Functions ---
 
@@ -37,6 +24,63 @@ def load_txt(file_path: str) -> str:
     except Exception as e:
         print(f"Error loading TXT file {file_path}: {e}")
         return ""
+
+
+def load_react_component_file(file_path: str) -> str:
+    """
+    Loads content from a React component file (.jsx, .js, .tsx, .ts).
+    Currently, this is the same as loading a TXT file.
+    Future enhancements could include parsing or specific validation.
+    """
+    return load_txt(file_path)
+
+
+def load_and_chunk_react_components(components_dir: str = "backend/retrieved_components/") -> list[dict]:
+    """
+    Loads all React component files from the specified directory.
+    Each file's content is treated as a single "chunk".
+
+    Args:
+        components_dir (str): The directory containing React component files.
+
+    Returns:
+        list[dict]: A list of dictionaries, where each dictionary has
+                    'content' (the file content) and 'metadata' (filename).
+    """
+    documents = []
+    valid_extensions = ['.js', '.jsx', '.ts', '.tsx']
+    
+    # Ensure components_dir path is correct, potentially using config if it were defined there
+    # For now, using the provided default or argument.
+    
+    for ext in valid_extensions:
+        # Use glob to find all files with the current extension in the directory
+        # The pattern `*` matches any characters, so `*` + `ext` matches all files ending with `ext`.
+        # `recursive=True` could be used if components are in subdirectories, along with `**/*` pattern.
+        # For now, assuming flat structure in components_dir.
+        search_pattern = os.path.join(components_dir, f"*{ext}")
+        for file_path in glob.glob(search_pattern):
+            print(f"Processing component file: {file_path}")
+            content = load_react_component_file(file_path)
+            if content:
+                documents.append({
+                    "content": content,
+                    "metadata": {"filename": os.path.basename(file_path)}
+                })
+            else:
+                print(f"Could not load content from {file_path}")
+                
+    if not documents:
+        print(f"No component files found or loaded in directory: {components_dir}")
+        # Example: Check if the directory actually exists or has files
+        if not os.path.exists(components_dir):
+            print(f"Error: Components directory '{components_dir}' does not exist.")
+        else:
+            print(f"Directory '{components_dir}' exists but no files with extensions {valid_extensions} were found or loaded.")
+
+
+    return documents
+
 
 def load_pdf(file_path: str) -> str:
     """
@@ -115,103 +159,58 @@ def chunk_text(text: str, chunk_size: int = 200, overlap: int = 20) -> list[str]
         chunks.append(chunk)
     return chunks
 
-def generate_embeddings(text_chunks: list[str]) -> list[list[float]]:
-    """
-    Generates numerical embeddings for a list of text chunks using the pre-loaded
-    SentenceTransformer model.
-
-    Args:
-        text_chunks (list[str]): A list of text chunks for which to generate embeddings.
-
-    Returns:
-        list[list[float]]: A list of embeddings, where each embedding is a list of floats.
-                           Returns an empty list if the model is not loaded, if input is empty,
-                           or if an error occurs during embedding generation.
-    """
-    # Check if the SentenceTransformer model was loaded successfully.
-    if model is None:
-        print("Error: SentenceTransformer model is not loaded. Cannot generate embeddings.")
-        return []
-    
-    if not text_chunks: # If there are no chunks, return an empty list.
-        return []
-        
-    try:
-        # Generate embeddings using the model's encode method.
-        # `convert_to_tensor=False` ensures the output is a NumPy array or list of lists,
-        # which is easier to handle for JSON serialization or direct use.
-        embeddings = model.encode(text_chunks, convert_to_tensor=False)
-        
-        # Ensure embeddings are returned as a list of lists of floats.
-        # The `encode` method might return a NumPy array, so convert it if necessary.
-        return embeddings.tolist() if hasattr(embeddings, 'tolist') else embeddings
-    except Exception as e:
-        print(f"Error generating embeddings: {e}")
-        return []
+# generate_embeddings function is removed as it will be part of vector_store.py
 
 # --- Example Usage (for direct testing of this module) ---
 if __name__ == '__main__':
-    # This block executes only when the script is run directly (e.g., `python document_processor.py`).
-    # It's useful for testing the functionalities of this module independently.
     print("\nTesting document processing functions...")
 
-    # --- Test TXT Loading and Processing ---
-    # Construct path to a sample TXT file (assuming it's in a subdirectory relative to this script)
-    sample_txt_path = os.path.join(os.path.dirname(__file__), 'documents_for_rag', 'sample1.txt')
+    # --- Test React Component Loading ---
+    # The default path for components is 'backend/retrieved_components/'
+    # Ensure this path is correct relative to where this script might be run from,
+    # or provide an absolute path / correctly relative path if needed.
+    # For example, if script is run from /app, 'backend/retrieved_components/' is correct.
     
-    # For robust testing, create a dummy file if it doesn't exist.
-    if not os.path.exists(sample_txt_path):
-        os.makedirs(os.path.join(os.path.dirname(__file__), 'documents_for_rag'), exist_ok=True)
-        with open(sample_txt_path, 'w', encoding='utf-8') as f:
-            f.write("This is a sample text file for testing the document_processor.py module. It contains several sentences.")
-        print(f"Created dummy file for testing: {sample_txt_path}")
+    # Get the directory of the current script
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the path to the retrieved_components directory relative to the script's directory
+    # This assumes 'retrieved_components' is a sibling to the directory containing this script,
+    # which is not the case here.
+    # The structure is /app/backend/document_processor.py and /app/backend/retrieved_components
+    # So, the default "backend/retrieved_components/" is actually incorrect if script is run from /app/backend
+    # It should be "./retrieved_components/" or "../backend/retrieved_components" if in a sub-folder of backend.
+    # Let's assume it's run from /app for now, so "backend/retrieved_components/" is fine.
+    # However, for robustness, using an absolute path or a path relative to a known root (like config.BASE_DIR if we had one)
+    # is better. The default argument `backend/retrieved_components/` is relative to the CWD.
 
-    txt_content = load_txt(sample_txt_path)
-    if txt_content:
-        print(f"\n--- TXT Content (first 100 chars): ---\n{txt_content[:100]}...")
-        txt_chunks = chunk_text(txt_content, chunk_size=10) # Use smaller chunk size for testing
-        print(f"\n--- TXT Chunks (first 3): ---\n{txt_chunks[:3]}")
-        
-        if model: # Check if the embedding model is loaded
-            # Generate embeddings for the first few chunks for brevity
-            txt_embeddings = generate_embeddings(txt_chunks[:1]) 
-            if txt_embeddings:
-                print(f"\n--- TXT Embedding (first chunk, first 5 dims): ---\n{txt_embeddings[0][:5]}...")
-            else:
-                print("\n--- TXT Embedding generation failed. ---")
-        else:
-            print("\n--- Skipping TXT embedding generation as model is not loaded. ---")
-    else:
-        print("\n--- TXT Loading Failed ---")
-
-    # --- Test PDF Loading (Illustrative) ---
-    # Note: PDF and DOCX testing might fail if their respective libraries (PyPDF2, python-docx)
-    # were not installed correctly, e.g., due to environment constraints.
-    # This section demonstrates how one might test them.
+    # For testing from `python backend/document_processor.py` inside `/app`
+    # The CWD would be `/app`. So `backend/retrieved_components` is the correct path.
     
-    # Path to a dummy PDF (you would need to create a sample.pdf for this to run)
-    sample_pdf_path = os.path.join(os.path.dirname(__file__), 'documents_for_rag', 'sample.pdf')
-    if not os.path.exists(sample_pdf_path):
-        print(f"\nDummy PDF file {sample_pdf_path} not found. Skipping PDF test.")
+    print("\n--- Testing React Component Loading ---")
+    # Use the default path specified in the function definition
+    react_components_path = "backend/retrieved_components/" 
+    
+    # Check if the directory exists to provide better feedback
+    if not os.path.isdir(react_components_path):
+        print(f"Error: Test components directory '{react_components_path}' not found from CWD '{os.getcwd()}'.")
+        print("Please ensure the path is correct or the script is run from the project root (/app).")
+        # Attempt to use a path relative to this script file for robustness in testing.
+        # This assumes 'retrieved_components' is in the same directory as 'document_processor.py'.
+        # This is incorrect for the current structure.
+        # For now, we'll rely on the default path and the user running from /app.
+    
+    loaded_components = load_and_chunk_react_components() # Uses default path
+    
+    if loaded_components:
+        print(f"\nSuccessfully loaded {len(loaded_components)} component(s).")
+        for i, doc in enumerate(loaded_components):
+            print(f"\n--- Component {i+1}: {doc['metadata']['filename']} ---")
+            print(f"Content (first 100 chars): {doc['content'][:100]}...")
     else:
-        pdf_content = load_pdf(sample_pdf_path)
-        if pdf_content:
-            print(f"\n--- PDF Content (first 100 chars): ---\n{pdf_content[:100]}...")
-            pdf_chunks = chunk_text(pdf_content, chunk_size=50)
-            print(f"\n--- PDF Chunks (first 2): ---\n{pdf_chunks[:2]}")
-        else:
-            print("\n--- PDF Loading Failed (or file is empty/corrupt, or PyPDF2 is missing/failed). ---")
+        print("\n--- No React components loaded. Check paths and file extensions. ---")
+        print(f"Searched in: {os.path.abspath(react_components_path)}")
 
-    # --- Test DOCX Loading (Illustrative) ---
-    # Path to a dummy DOCX (you would need to create a sample.docx for this to run)
-    sample_docx_path = os.path.join(os.path.dirname(__file__), 'documents_for_rag', 'sample.docx')
-    if not os.path.exists(sample_docx_path):
-         print(f"\nDummy DOCX file {sample_docx_path} not found. Skipping DOCX test.")
-    else:
-        docx_content = load_docx(sample_docx_path)
-        if docx_content:
-            print(f"\n--- DOCX Content (first 100 chars): ---\n{docx_content[:100]}...")
-            docx_chunks = chunk_text(docx_content, chunk_size=50)
-            print(f"\n--- DOCX Chunks (first 2): ---\n{docx_chunks[:2]}")
-        else:
-            print("\n--- DOCX Loading Failed (or file is empty/corrupt, or python-docx is missing/failed). ---")
+
+    # Remove old test for TXT, PDF, DOCX to keep focus on React components for now
+    # If needed, they can be added back or tested separately.
+    print("\n--- Other document type tests (TXT, PDF, DOCX) were removed for this example. ---")

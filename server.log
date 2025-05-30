@@ -1,0 +1,49 @@
+INFO:     Started server process [5681]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+SentenceTransformer model 'all-MiniLM-L6-v2' loaded successfully.
+Resolved relative CHROMA_DB_PATH to: /app/./chroma_data
+ChromaDB client initialized. Storage path: /app/./chroma_data
+Collection 'react_components' loaded/created. Items: 2
+Warning: OPENAI_API_KEY not found. OpenAI client not initialized. Will use dummy responses for generation.
+Attempting to start Uvicorn server...
+FastAPI startup: ChromaDB client and collection appear to be initialized.
+Collection 'react_components' (expected: react_components) has 2 items at startup.
+FastAPI startup: Vector Store's SentenceTransformer model appears to be initialized.
+FastAPI startup: Note - HuggingFace RAG chat functionality is currently disabled due to llm_generator.py changes.
+Received request to generate React components for file_key: dummy_file_key, node_ids: ['1:1', '1:2']
+Processing node_id: 1:1...
+Step 1: Fetching Figma data for file_key='dummy_file_key', node_id='1:1'...
+Warning: FIGMA_API_KEY not set. Returning dummy data for nodes in file_key: dummy_file_key
+Successfully fetched Figma data for: Frame1 (Type: FRAME)
+Step 2: Formulated query for vector store: 'React component for a frame similar to 'Frame1''
+Step 3: Retrieving relevant components from vector store (n_results=1)...
+Query successful. Retrieved 1 documents for: 'React component for a frame similar to 'Frame1''
+Found relevant component: Card.jsx
+Step 4: Constructed LLM prompt for component 'Frame1'.
+Step 5: Calling LLM to generate React code for 'Frame1'...
+Warning: OpenAI client not initialized (API key likely missing). Returning dummy React component for 'Frame1'.
+Code generation complete for 'Frame1'.
+Step 6: Result prepared.
+Successfully processed node_id: 1:1. Result keys: ['figma_node_id', 'figma_component_name', 'generated_component_name', 'query_used_for_retrieval', 'retrieved_context_source', 'retrieved_context_code_snippet', 'llm_prompt_snippet', 'generated_react_code']
+Processing node_id: 1:2...
+Step 1: Fetching Figma data for file_key='dummy_file_key', node_id='1:2'...
+Warning: FIGMA_API_KEY not set. Returning dummy data for nodes in file_key: dummy_file_key
+Successfully fetched Figma data for: Rectangle1 (Type: RECTANGLE)
+Step 2: Formulated query for vector store: 'React component for a rectangle similar to 'Rectangle1''
+Step 3: Retrieving relevant components from vector store (n_results=1)...
+Query successful. Retrieved 1 documents for: 'React component for a rectangle similar to 'Rectangle1''
+Found relevant component: Card.jsx
+Step 4: Constructed LLM prompt for component 'Rectangle1'.
+Step 5: Calling LLM to generate React code for 'Rectangle1'...
+Warning: OpenAI client not initialized (API key likely missing). Returning dummy React component for 'Rectangle1'.
+Code generation complete for 'Rectangle1'.
+Step 6: Result prepared.
+Successfully processed node_id: 1:2. Result keys: ['figma_node_id', 'figma_component_name', 'generated_component_name', 'query_used_for_retrieval', 'retrieved_context_source', 'retrieved_context_code_snippet', 'llm_prompt_snippet', 'generated_react_code']
+Finished processing all requested node_ids. Total results: 2
+INFO:     127.0.0.1:48086 - "POST /generate-react-from-figma HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [5681]

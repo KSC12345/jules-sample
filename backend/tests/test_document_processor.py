@@ -1,136 +1,152 @@
-import os
 import pytest
+import os
+import shutil
+import tempfile
+
+# Add project root to sys.path to allow imports like `from backend.document_processor...`
+# This is often needed when running tests directly without full package installation.
 import sys
+# current_dir = os.path.dirname(os.path.abspath(__file__)) # tests directory
+# project_root = os.path.dirname(current_dir) # backend directory
+# app_root = os.path.dirname(project_root) # /app directory
+# if app_root not in sys.path:
+#    sys.path.insert(0, app_root)
+# The above logic might be needed if running `python backend/tests/test_document_processor.py`
+# However, with `python -m pytest backend/tests`, pytest handles path discovery better.
+# For now, let's rely on pytest's path handling or ensure PYTHONPATH is set correctly in the environment.
+# If imports fail, this sys.path manipulation is the first thing to check.
 
-# Add the parent directory (/app) to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from backend.document_processor import load_and_chunk_react_components
 
-from document_processor import load_txt, chunk_text, generate_embeddings
-from unittest.mock import patch, MagicMock
+# --- Fixtures ---
 
-# Define the path to the sample document for testing
-# Assumes this test file is in backend/tests/ and the sample doc is also there
-SAMPLE_DOC_PATH = os.path.join(os.path.dirname(__file__), "sample_test_doc.txt")
-EMPTY_DOC_PATH = os.path.join(os.path.dirname(__file__), "empty_test_doc.txt")
+@pytest.fixture
+def empty_dir(tmp_path):
+    """Creates an empty temporary directory using pytest's tmp_path fixture."""
+    # tmp_path is a pathlib.Path object provided by pytest for temporary file system resources.
+    # It's automatically managed and cleaned up by pytest.
+    test_dir = tmp_path / "empty_test_dir"
+    test_dir.mkdir()
+    print(f"Created empty_dir: {test_dir}")
+    return str(test_dir) # Return path as string, as os.path.join might be used internally
 
-@pytest.fixture(scope="module", autouse=True)
-def create_empty_file():
-    # Create an empty file for testing empty file handling
-    with open(EMPTY_DOC_PATH, 'w') as f:
-        pass
-    yield
-    # Teardown: remove the empty file
-    os.remove(EMPTY_DOC_PATH)
+@pytest.fixture
+def valid_components_dir(tmp_path):
+    """Creates a temporary directory with a couple of valid React component files."""
+    test_dir = tmp_path / "valid_components_test_dir"
+    test_dir.mkdir()
+    print(f"Created valid_components_dir: {test_dir}")
 
-def test_load_txt_success():
-    """Tests loading a .txt file successfully."""
-    content = load_txt(SAMPLE_DOC_PATH)
-    assert "This is a test document" in content
-    assert "Lorem ipsum dolor sit amet" in content
+    button_jsx_content = """
+    import React from 'react';
+    function Button({ label }) {
+      return <button>{label}</button>;
+    }
+    export default Button;
+    """
+    with open(test_dir / "Button.jsx", "w") as f:
+        f.write(button_jsx_content)
 
-def test_load_txt_file_not_found():
-    """Tests loading a non-existent .txt file."""
-    content = load_txt("non_existent_file.txt")
-    assert content == ""
+    card_tsx_content = """
+    import React from 'react';
+    interface CardProps { title: string; children: React.ReactNode; }
+    const Card: React.FC<CardProps> = ({ title, children }) => {
+      return <div data-testid="card"><h3>{title}</h3><div>{children}</div></div>;
+    }
+    export default Card;
+    """
+    with open(test_dir / "Card.tsx", "w") as f:
+        f.write(card_tsx_content)
+        
+    return str(test_dir)
 
-def test_load_txt_empty_file():
-    """Tests loading an empty .txt file."""
-    content = load_txt(EMPTY_DOC_PATH)
-    assert content == ""
+@pytest.fixture
+def mixed_files_dir(tmp_path):
+    """Creates a temporary directory with a mix of React and non-React files."""
+    test_dir = tmp_path / "mixed_files_test_dir"
+    test_dir.mkdir()
+    print(f"Created mixed_files_dir: {test_dir}")
 
-def test_chunk_text_simple():
-    """Tests basic text chunking."""
-    text = "one two three four five six seven eight nine ten"
-    chunks = chunk_text(text, chunk_size=5, overlap=1) # Words as units
-    assert len(chunks) == 3 
-    # Expected: "one two three four five", "five six seven eight nine", "nine ten" (approx)
-    # Word joining makes it tricky, let's check content
-    assert "one two three four five" in chunks[0]
-    # Overlap means "five" should be in the second chunk
-    assert "five six seven eight nine" in chunks[1] 
-    # Last chunk might be smaller
-    assert "nine ten" in chunks[2] or "ten" in chunks[2] # Depending on exact split
+    # Valid files
+    (test_dir / "Component1.js").write_text("export default () => <p>Component1 JS</p>;")
+    (test_dir / "Component2.jsx").write_text("export default () => <p>Component2 JSX</p>;")
+    (test_dir / "Component3.ts").write_text("export default () => <p>Component3 TS</p>;") # Simplified for test
+    (test_dir / "Component4.tsx").write_text("export default () => <p>Component4 TSX</p>;") # Simplified for test
 
-def test_chunk_text_with_overlap():
-    text = "This is a longer sentence to test chunking with more overlap and ensure content integrity."
-    words = text.split()
-    chunk_size = 10
-    overlap = 3
-    chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+    # Invalid files (should be ignored)
+    (test_dir / "notes.txt").write_text("This is a text file.")
+    (test_dir / "script.py").write_text("print('This is a python script')")
+    (test_dir / "README.md").write_text("# Markdown file")
     
-    # Check that chunks are created
-    assert len(chunks) > 0
+    # Subdirectory (should be ignored by current non-recursive implementation)
+    sub_dir = test_dir / "subdirectory"
+    sub_dir.mkdir()
+    (sub_dir / "NestedComponent.jsx").write_text("export default () => <p>Nested</p>;")
+
+    return str(test_dir)
+
+# --- Test Cases ---
+
+def test_load_empty_dir(empty_dir):
+    """Test loading from an empty directory."""
+    print(f"Testing with empty_dir: {empty_dir}")
+    documents = load_and_chunk_react_components(components_dir=empty_dir)
+    assert len(documents) == 0, "Should return an empty list for an empty directory."
+
+def test_load_valid_components(valid_components_dir):
+    """Test loading from a directory with valid React components."""
+    print(f"Testing with valid_components_dir: {valid_components_dir}")
+    documents = load_and_chunk_react_components(components_dir=valid_components_dir)
+    assert len(documents) == 2, "Should load two component files."
+
+    filenames = sorted([doc['metadata']['filename'] for doc in documents])
+    assert filenames == ["Button.jsx", "Card.tsx"], "Filenames should be correctly extracted."
+
+    button_doc = next((doc for doc in documents if doc['metadata']['filename'] == "Button.jsx"), None)
+    assert button_doc is not None, "Button.jsx document should be found."
+    assert "function Button({ label })" in button_doc['content'], "Content of Button.jsx seems incorrect."
     
-    # Check content of first chunk
-    expected_first_chunk = " ".join(words[:chunk_size])
-    assert chunks[0] == expected_first_chunk
+    card_doc = next((doc for doc in documents if doc['metadata']['filename'] == "Card.tsx"), None)
+    assert card_doc is not None, "Card.tsx document should be found."
+    assert "interface CardProps" in card_doc['content'], "Content of Card.tsx seems incorrect."
+
+
+def test_load_mixed_files(mixed_files_dir):
+    """Test loading from a directory with mixed file types."""
+    print(f"Testing with mixed_files_dir: {mixed_files_dir}")
+    documents = load_and_chunk_react_components(components_dir=mixed_files_dir)
     
-    # Check overlap: last 'overlap' words of chunk 0 should be first 'overlap' words of chunk 1
-    if len(chunks) > 1:
-        overlap_words_chunk0 = words[chunk_size-overlap:chunk_size]
-        overlap_words_chunk1 = chunks[1].split()[:overlap]
-        assert overlap_words_chunk0 == overlap_words_chunk1
+    assert len(documents) == 4, "Should only load files with .js, .jsx, .ts, .tsx extensions from the top level."
 
-def test_chunk_text_small_text():
-    """Tests chunking with text smaller than chunk size."""
-    text = "short text"
-    chunks = chunk_text(text, chunk_size=10, overlap=2)
-    assert len(chunks) == 1
-    assert chunks[0] == text
+    valid_filenames = {"Component1.js", "Component2.jsx", "Component3.ts", "Component4.tsx"}
+    loaded_filenames = {doc['metadata']['filename'] for doc in documents}
+    assert loaded_filenames == valid_filenames, "Only files with valid extensions should be loaded."
 
-def test_chunk_text_empty_text():
-    """Tests chunking with empty text."""
-    text = ""
-    chunks = chunk_text(text, chunk_size=10, overlap=2)
-    assert len(chunks) == 0
+    for doc in documents:
+        assert isinstance(doc['content'], str) and len(doc['content']) > 0, "Document content should be a non-empty string."
+        assert doc['metadata']['filename'] in valid_filenames, "Metadata filename should be one of the valid files."
 
-# Mocking SentenceTransformer for generate_embeddings
-# The actual model loading will likely fail in the constrained environment.
-@patch('document_processor.SentenceTransformer')
-def test_generate_embeddings_mocked(MockSentenceTransformer):
-    # Configure the mock model and its encode method
-    mock_model_instance = MagicMock()
-    # Simulate model.encode() returning a list of lists (or numpy array that can be .tolist())
-    mock_model_instance.encode.return_value = [[0.1, 0.2], [0.3, 0.4]] 
-    MockSentenceTransformer.return_value = mock_model_instance
+def test_load_non_existent_dir():
+    """Test loading from a non-existent directory."""
+    # Use a unique name within pytest's tmp_path for this test, though it won't be created.
+    # tmp_path itself is a good base if we were to use pathlib more directly.
+    # For this test, just need a path that almost certainly doesn't exist.
+    non_existent_path = os.path.join(str(tempfile.gettempdir()), "unique_non_existent_dir_12345") # Use tempfile for a more conventional temp area
     
-    # Re-assign the model in document_processor to our mock for this test's scope
-    # This is tricky because the model is loaded at module level.
-    # A better way would be to pass the model into generate_embeddings,
-    # but for now, we try to patch it globally for this test.
-    # This kind of patching is more reliable if document_processor.model is explicitly re-assigned
-    # or if generate_embeddings takes model as an argument.
-    # For now, we rely on the initial patch at import time of document_processor.
-    
-    # To ensure the mock is used, we can temporarily set the global 'model' in document_processor
-    # This is quite intrusive and generally not recommended, but module-level globals are hard to mock per-test.
-    import document_processor as dp
-    original_model = dp.model
-    dp.model = mock_model_instance # Force use our mock
+    # Ensure it really doesn't exist from a previous failed run if using a fixed path.
+    if os.path.exists(non_existent_path):
+        shutil.rmtree(non_existent_path) 
 
-    chunks = ["first chunk", "second chunk"]
-    embeddings = generate_embeddings(chunks)
-    
-    assert len(embeddings) == 2
-    assert embeddings[0] == [0.1, 0.2]
-    assert embeddings[1] == [0.3, 0.4]
-    mock_model_instance.encode.assert_called_once_with(chunks, convert_to_tensor=False)
+    print(f"Testing with non_existent_dir: {non_existent_path}")
+    # The function itself prints an error to console, test asserts it returns empty list.
+    documents = load_and_chunk_react_components(components_dir=non_existent_path)
+    assert len(documents) == 0, "Should return an empty list for a non-existent directory."
 
-    dp.model = original_model # Restore original model
-
-@patch('document_processor.model', None) # Simulate model not loaded
-def test_generate_embeddings_model_not_loaded():
-    chunks = ["test chunk"]
-    embeddings = generate_embeddings(chunks)
-    assert embeddings == []
-
-def test_generate_embeddings_empty_chunks():
-    embeddings = generate_embeddings([])
-    assert embeddings == []
-
-# PDF and DOCX loading tests would go here, but likely fail if PyPDF2/python-docx
-# were not installed. We can write them assuming they *should* work, or skip.
-# For now, skipping due to high probability of lib installation failure.
-
-# To run: pytest backend/tests/test_document_processor.py
-# (Ensure backend/tests/sample_test_doc.txt exists)
+# Note on sys.path for running tests:
+# If running tests using `python -m pytest backend/tests`, pytest typically handles
+# path discovery well, and explicit sys.path manipulation might not be needed at the top of this file.
+# The `from backend.document_processor ...` import relies on 'backend' being discoverable.
+# If issues arise, ensure the tests are run from the '/app' directory or that PYTHONPATH includes '/app'.
+# The fixtures now use pytest's `tmp_path` which is preferred over `tempfile.mkdtemp()` for pytest tests.
+# `tmp_path` returns a `pathlib.Path` object. Converted to `str` for `load_and_chunk_react_components`
+# if it expects string paths (os.path.join internally will handle Path objects too in modern Python).

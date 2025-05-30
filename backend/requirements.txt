@@ -2,6 +2,8 @@ fastapi==0.115.9
 uvicorn[standard]==0.34.2 
 chromadb==1.0.10
 sentence-transformers==4.1.0
+requests
+openai
 # torch and transformers are dependencies of sentence-transformers, 
 # but listing them explicitly to acknowledge their importance.
 # Versions might be constrained by sentence-transformers.
