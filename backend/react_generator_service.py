@@ -27,7 +27,7 @@ def generate_react_for_figma_node(file_key: str, node_id: str) -> dict:
             error_msg = f"Figma node '{node_id}' not found in response for file '{file_key}'."
             print(error_msg)
             return {"error": error_msg, "details": figma_data_response.get("err", "Node not found or access issue.")}
-        
+
         # Extract the actual node data for the requested node_id
         # The structure is response -> "nodes" -> node_id -> "document"
         figma_node_info = figma_data_response["nodes"][node_id]
@@ -35,7 +35,7 @@ def generate_react_for_figma_node(file_key: str, node_id: str) -> dict:
             error_msg = f"Figma node data for '{node_id}' is incomplete or missing 'document' field."
             print(error_msg)
             return {"error": error_msg, "details": "Node data structure is not as expected."}
-        
+
         figma_node_data = figma_node_info["document"] # This is the actual design data for the node
         figma_component_name = figma_node_data.get('name', 'UnnamedFigmaNode')
         print(f"Successfully fetched Figma data for: {figma_component_name} (Type: {figma_node_data.get('type')})")
@@ -79,7 +79,7 @@ def generate_react_for_figma_node(file_key: str, node_id: str) -> dict:
         # Add other properties as deemed useful: e.g., children structure summary, text content if any.
     }
     figma_props_str = json.dumps(figma_props_for_prompt, indent=2)
-    
+
     # Sanitize Figma component name for use in function/component naming
     # Remove spaces and special characters, ensure PascalCase
     base_name = figma_node_data.get('name', 'MyFigmaComponent')
@@ -149,18 +149,18 @@ The component should be exportable as `export default {pascal_case_name};`.
 
 if __name__ == '__main__':
     print("\n--- Testing React Generator Service ---")
-    
+
     # Test with dummy Figma data (assuming figma_retriever will return dummy data
     # if FIGMA_API_KEY is not set, which is the case in CI/testing).
     # The dummy node "1:1" (Frame1) from figma_retriever.py should be used.
     test_file_key = "dummy_figma_file_key"
-    test_node_id = "1:1" 
+    test_node_id = "1:1"
 
     print(f"\nAttempting to generate React component for Figma node: file='{test_file_key}', node='{test_node_id}'")
-    
+
     # The sub-modules (figma_retriever, vector_store, llm_generator) should handle
     # their own states regarding API keys or model loading and return dummy/default data if needed.
-    
+
     generation_result = generate_react_for_figma_node(file_key=test_file_key, node_id=test_node_id)
 
     print("\n--- Generation Result ---")

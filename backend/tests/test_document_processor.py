@@ -57,7 +57,7 @@ def valid_components_dir(tmp_path):
     """
     with open(test_dir / "Card.tsx", "w") as f:
         f.write(card_tsx_content)
-        
+
     return str(test_dir)
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def test_load_valid_components(valid_components_dir):
     button_doc = next((doc for doc in documents if doc['metadata']['filename'] == "Button.jsx"), None)
     assert button_doc is not None, "Button.jsx document should be found."
     assert "function Button({ label })" in button_doc['content'], "Content of Button.jsx seems incorrect."
-    
+
     card_doc = next((doc for doc in documents if doc['metadata']['filename'] == "Card.tsx"), None)
     assert card_doc is not None, "Card.tsx document should be found."
     assert "interface CardProps" in card_doc['content'], "Content of Card.tsx seems incorrect."
@@ -115,7 +115,7 @@ def test_load_mixed_files(mixed_files_dir):
     """Test loading from a directory with mixed file types."""
     print(f"Testing with mixed_files_dir: {mixed_files_dir}")
     documents = load_and_chunk_react_components(components_dir=mixed_files_dir)
-    
+
     assert len(documents) == 4, "Should only load files with .js, .jsx, .ts, .tsx extensions from the top level."
 
     valid_filenames = {"Component1.js", "Component2.jsx", "Component3.ts", "Component4.tsx"}
@@ -132,10 +132,10 @@ def test_load_non_existent_dir():
     # tmp_path itself is a good base if we were to use pathlib more directly.
     # For this test, just need a path that almost certainly doesn't exist.
     non_existent_path = os.path.join(str(tempfile.gettempdir()), "unique_non_existent_dir_12345") # Use tempfile for a more conventional temp area
-    
+
     # Ensure it really doesn't exist from a previous failed run if using a fixed path.
     if os.path.exists(non_existent_path):
-        shutil.rmtree(non_existent_path) 
+        shutil.rmtree(non_existent_path)
 
     print(f"Testing with non_existent_dir: {non_existent_path}")
     # The function itself prints an error to console, test asserts it returns empty list.

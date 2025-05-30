@@ -35,13 +35,13 @@ def vector_store_module(monkeypatch, temp_chroma_dir):
     # Generate a unique collection name for each test function to ensure isolation
     # even if the underlying client/DB path were somehow shared (it shouldn't be with temp_chroma_dir).
     test_collection_name = f"test_collection_{os.getpid()}_{int(time.time() * 1000)}"
-    
+
     print(f"Patching config: CHROMA_DB_PATH='{temp_chroma_dir}', CHROMA_COLLECTION_NAME='{test_collection_name}'")
-    
+
     # Patch backend.config attributes that vector_store.py uses at its import time.
     monkeypatch.setattr('backend.config.CHROMA_DB_PATH', temp_chroma_dir)
     monkeypatch.setattr('backend.config.CHROMA_COLLECTION_NAME', test_collection_name)
-    
+
     # IMPORTANT: Because vector_store.py initializes its client and collection as global
     # variables at the module's top level (when it's first imported), simply patching
     # backend.config won't affect the already initialized client/collection if vector_store.py
@@ -52,7 +52,7 @@ def vector_store_module(monkeypatch, temp_chroma_dir):
     # We can achieve this by using importlib.reload.
     import importlib
     import backend.vector_store # Ensure it's loaded once if not already
-    
+
     # Store original values to restore later if necessary, though monkeypatch handles this for config.
     # However, for vector_store's own globals, we might need manual reset if not reloading.
     original_client = getattr(backend.vector_store, 'client', None)
@@ -61,14 +61,14 @@ def vector_store_module(monkeypatch, temp_chroma_dir):
 
     # Reload the module to re-execute its top-level assignments with patched config.
     reloaded_vs_module = importlib.reload(backend.vector_store)
-    
+
     # Check if the reloaded module's client actually used the patched path.
     # This is a bit of an internal check, ideally, we verify behavior, not implementation.
     # However, it's crucial for test isolation.
     # Note: reloaded_vs_module.client.settings.chroma_db_impl etc. for new Chroma versions.
     # For older chromadb.PersistentClient(path=...), the path is stored.
     # Let's assume the print statements during initialization in vector_store.py will show the path.
-    
+
     yield reloaded_vs_module # Provide the reloaded module to the tests
 
     # Teardown: Clean up the specific collection from the temporary ChromaDB instance.
@@ -85,7 +85,7 @@ def vector_store_module(monkeypatch, temp_chroma_dir):
             except Exception as e:
                 # It might fail if collection was never created or already cleaned.
                 print(f"Info/Warning during collection deletion: {e}")
-        
+
         # Attempt to reset or close the client if possible, to release file locks before dir removal.
         # This is highly dependent on the ChromaDB client library's API.
         # if hasattr(reloaded_vs_module.client, 'reset'): reloaded_vs_module.client.reset()
@@ -93,7 +93,7 @@ def vector_store_module(monkeypatch, temp_chroma_dir):
 
     except Exception as e:
         print(f"Error during vector_store_module fixture teardown: {e}")
-    
+
     # Restore original module state if it was significantly altered beyond monkeypatch.
     # This is more for modules that don't get reloaded but just patched.
     # Since we reloaded, other modules importing vector_store will get this reloaded version too
@@ -124,7 +124,7 @@ def test_module_import_and_initialization(vector_store_module):
     assert vs.client is not None, "ChromaDB client should be initialized."
     assert vs.collection is not None, "ChromaDB collection should be initialized."
     # The collection name should match what was set by monkeypatch
-    assert vs.collection.name == vs.config.CHROMA_COLLECTION_NAME 
+    assert vs.collection.name == vs.config.CHROMA_COLLECTION_NAME
     print(f"Test collection name in use: {vs.collection.name}")
     # Path check is harder here, would rely on printed output from vector_store.py for confirmation
     # or direct inspection of vs.client if its API allows.

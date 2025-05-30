@@ -86,7 +86,7 @@ async def test_generate_react_from_figma_success_dummy_data(client: AsyncClient,
         assert "figma_component_name" in item
         assert "generated_component_name" in item
         assert "generated_react_code" in item
-        
+
         # Check that dummy Figma data was used
         if node_id == "1:1":
             assert item["figma_component_name"] == "Frame1" # From DUMMY_NODES_INFO_RESPONSE
@@ -98,7 +98,7 @@ async def test_generate_react_from_figma_success_dummy_data(client: AsyncClient,
         # Check that dummy LLM response was used
         assert "DummyFigmaComponent_" in item["generated_react_code"]
         assert f"// Component Name: {item['generated_component_name']}" in item["generated_react_code"]
-        
+
         # Check that vector store retrieval happened (source should be one of our dummy components)
         assert item["retrieved_context_source"] in ["Button.jsx", "Card.jsx"], \
             f"Unexpected retrieved_context_source: {item['retrieved_context_source']}"

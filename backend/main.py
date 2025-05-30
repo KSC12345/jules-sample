@@ -20,7 +20,7 @@ from .document_processor import load_and_chunk_react_components
 # generate_response_from_context and generator_pipeline were for a previous HuggingFace-based RAG chat.
 # These have been removed from llm_generator.py, which now focuses on OpenAI for code generation.
 # Commenting out these imports and related code in /chat and lifespan for now.
-# from .llm_generator import generate_response_from_context, generator_pipeline as llm_pipeline_global 
+# from .llm_generator import generate_response_from_context, generator_pipeline as llm_pipeline_global
 # For the new Figma to React generation service:
 from .react_generator_service import generate_react_for_figma_node
 # For Pydantic model field type
@@ -117,7 +117,7 @@ async def process_documents_endpoint(request_body: ProcessRequest):
     # This endpoint is now problematic because `process_docs_for_rag` was removed.
     # It needs to be updated or removed.
     # ... (original code commented out) ...
-    pass 
+    pass
 """
 
 @app.post("/process-components")
@@ -133,7 +133,7 @@ async def process_components_endpoint():
     try:
         # Default components directory is used from document_processor.py
         print("Processing React components...")
-        component_documents = load_and_chunk_react_components() 
+        component_documents = load_and_chunk_react_components()
 
         if not component_documents:
             print("No components found or loaded.")
@@ -142,9 +142,9 @@ async def process_components_endpoint():
             return {"message": "No React components found or loaded.", "processed_count": 0}
 
         print(f"Found {len(component_documents)} component documents to process.")
-        
+
         success = add_documents(component_documents)
-        
+
         if success:
             return {
                 "message": "React components processed and added to vector store successfully.",
@@ -154,7 +154,7 @@ async def process_components_endpoint():
         else:
             # add_documents logs errors internally.
             raise HTTPException(status_code=500, detail="Failed to add component documents to vector store.")
-            
+
     except Exception as e:
         print(f"Error during /process-components: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
@@ -183,7 +183,7 @@ async def chat(chat_message: ChatMessage):
     # Simulate fetching context, but don't call LLM
     retrieved_docs_with_metadata = query_documents(
         query_text=user_message,
-        n_results=3 
+        n_results=3
     )
     retrieved_doc_chunks = []
     if retrieved_docs_with_metadata:
@@ -225,7 +225,7 @@ async def chat(chat_message: ChatMessage):
     # Return the user's query, the retrieved context (for transparency/debugging), and the LLM's response
     # return {
     #     "user_query": user_message,
-    #     "retrieved_context_chunks": retrieved_doc_chunks, 
+    #     "retrieved_context_chunks": retrieved_doc_chunks,
     #     "llm_response": llm_response_text # This is the key field for the frontend
     # }
 
@@ -237,7 +237,7 @@ async def generate_react_from_figma_endpoint(request: FigmaToReactRequest):
     Accepts a Figma file key and a list of node IDs.
     """
     print(f"Received request to generate React components for file_key: {request.figma_file_key}, node_ids: {request.node_ids}")
-    
+
     results = []
     for node_id in request.node_ids:
         print(f"Processing node_id: {node_id}...")
@@ -258,7 +258,7 @@ async def generate_react_from_figma_endpoint(request: FigmaToReactRequest):
                 "error": "An unexpected error occurred during processing.",
                 "details": str(e)
             })
-            
+
     print(f"Finished processing all requested node_ids. Total results: {len(results)}")
     return {"results": results}
 

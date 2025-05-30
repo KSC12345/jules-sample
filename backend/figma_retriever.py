@@ -162,9 +162,9 @@ def get_figma_file_info(file_key: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: The parsed JSON response from the Figma API,
                         or a dummy response if API key is not configured.
-    
+
     Raises:
-        HTTPException: If the API call fails (e.g. non-200 status code) 
+        HTTPException: If the API call fails (e.g. non-200 status code)
                        and FIGMA_API_KEY is configured.
     """
     if not FIGMA_API_KEY:
@@ -201,7 +201,7 @@ def get_figma_nodes_info(file_key: str, node_ids: List[str]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: The parsed JSON response from the Figma API,
                         or a dummy response if API key is not configured or node_ids is empty.
-    
+
     Raises:
         HTTPException: If the API call fails (e.g. non-200 status code)
                        and FIGMA_API_KEY is configured.
@@ -217,7 +217,7 @@ def get_figma_nodes_info(file_key: str, node_ids: List[str]) -> Dict[str, Any]:
         # For simplicity, let's return a modified DUMMY_NODES_INFO_RESPONSE that only contains
         # nodes from the DUMMY_NODES_INFO_RESPONSE that match the requested node_ids (if any).
         # This makes the dummy data slightly more responsive to the input.
-        
+
         filtered_dummy_nodes = {
             node_id: DUMMY_NODES_INFO_RESPONSE["nodes"][node_id]
             for node_id in node_ids if node_id in DUMMY_NODES_INFO_RESPONSE["nodes"]
@@ -228,7 +228,7 @@ def get_figma_nodes_info(file_key: str, node_ids: List[str]) -> Dict[str, Any]:
                 if node_id not in filtered_dummy_nodes:
                     filtered_dummy_nodes[node_id] = {
                         "document": {
-                            "id": node_id, "name": f"Dummy Node {node_id}", "type": "RECTANGLE", 
+                            "id": node_id, "name": f"Dummy Node {node_id}", "type": "RECTANGLE",
                             "absoluteBoundingBox": {"x":0,"y":0,"width":10,"height":10}, "fills":[]
                         },
                         "components": {}, "schemaVersion": 0, "styles": {}
@@ -255,14 +255,14 @@ def get_figma_nodes_info(file_key: str, node_ids: List[str]) -> Dict[str, Any]:
 
 if __name__ == '__main__':
     print("--- Testing Figma Retriever Functions (expecting dummy data if API key is not set) ---")
-    
+
     # Test get_figma_file_info
     print("\n--- Testing get_figma_file_info ---")
     try:
         file_info = get_figma_file_info(file_key="test_file_key_123")
         print("File Info (raw):")
         # Pretty print JSON for readability
-        print(json.dumps(file_info, indent=2)) 
+        print(json.dumps(file_info, indent=2))
         if "document" in file_info and "children" in file_info["document"]:
              print(f"\nSuccessfully retrieved/mocked file info. Document has {len(file_info['document']['children'])} top-level children.")
     except PlaceholderHTTPException as e: # Catching the placeholder for direct run

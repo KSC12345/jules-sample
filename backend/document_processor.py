@@ -49,10 +49,10 @@ def load_and_chunk_react_components(components_dir: str = "backend/retrieved_com
     """
     documents = []
     valid_extensions = ['.js', '.jsx', '.ts', '.tsx']
-    
+
     # Ensure components_dir path is correct, potentially using config if it were defined there
     # For now, using the provided default or argument.
-    
+
     for ext in valid_extensions:
         # Use glob to find all files with the current extension in the directory
         # The pattern `*` matches any characters, so `*` + `ext` matches all files ending with `ext`.
@@ -69,7 +69,7 @@ def load_and_chunk_react_components(components_dir: str = "backend/retrieved_com
                 })
             else:
                 print(f"Could not load content from {file_path}")
-                
+
     if not documents:
         print(f"No component files found or loaded in directory: {components_dir}")
         # Example: Check if the directory actually exists or has files
@@ -185,11 +185,11 @@ if __name__ == '__main__':
 
     # For testing from `python backend/document_processor.py` inside `/app`
     # The CWD would be `/app`. So `backend/retrieved_components` is the correct path.
-    
+
     print("\n--- Testing React Component Loading ---")
     # Use the default path specified in the function definition
-    react_components_path = "backend/retrieved_components/" 
-    
+    react_components_path = "backend/retrieved_components/"
+
     # Check if the directory exists to provide better feedback
     if not os.path.isdir(react_components_path):
         print(f"Error: Test components directory '{react_components_path}' not found from CWD '{os.getcwd()}'.")
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         # For now, we'll rely on the default path and the user running from /app.
     
     loaded_components = load_and_chunk_react_components() # Uses default path
-    
+
     if loaded_components:
         print(f"\nSuccessfully loaded {len(loaded_components)} component(s).")
         for i, doc in enumerate(loaded_components):

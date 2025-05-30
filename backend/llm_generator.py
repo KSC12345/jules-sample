@@ -31,7 +31,7 @@ else:
 # it would either need to be reinstated or moved to a separate module.
 # For this subtask, we assume it's being replaced or handled elsewhere.
 # Global variables for Hugging Face pipeline (commented out or removed):
-# MODEL_NAME = "distilgpt2" 
+# MODEL_NAME = "distilgpt2"
 # tokenizer = None
 # model = None
 # generator_pipeline = None
@@ -57,7 +57,7 @@ def generate_react_code_from_prompt(prompt: str, figma_component_name: str = "Un
     component_name_safe = re.sub(r'[^a-zA-Z0-9_]', '', component_name_for_dummy)
     if not component_name_safe: # If sanitization results in empty string, use a default
         component_name_safe = "GeneratedComponent"
-    
+
     prompt_snippet = prompt[:500] + ('...' if len(prompt) > 500 else '')
     # Escape characters that might break JS template literals or JSX content, then remove outer quotes if json.dumps added them.
     # This is a simple approach; a more robust HTML/JS escaping might be needed for arbitrary prompts.
@@ -210,7 +210,7 @@ if __name__ == '__main__':
         print("OpenAI client not initialized. Expecting DUMMY response.")
 
     generated_code = generate_react_code_from_prompt(sample_prompt, test_component_name)
-    
+
     print(f"\n--- Generated Code for {test_component_name} ---")
     print(generated_code)
     print("--- End of Generated Code ---")
@@ -221,7 +221,7 @@ if __name__ == '__main__':
         print("\nTest Result: Potentially LIVE component was returned (or a very good dummy).")
     else:
         print("\nTest Result: Output received, review manually.")
-        
+
     if not OPENAI_API_KEY:
         print("\n(Reminder: OPENAI_API_KEY was not set for this test run.)")
     else:

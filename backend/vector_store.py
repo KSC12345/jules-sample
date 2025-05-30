@@ -84,12 +84,12 @@ def add_documents(documents: list[dict]):
         if "content" not in doc or "metadata" not in doc or "filename" not in doc["metadata"]:
             print(f"Warning: Document at index {i} is missing 'content' or 'metadata.filename'. Skipping.")
             continue
-        
+
         doc_contents.append(doc["content"])
         # Ensure metadata is a flat dictionary of simple types for ChromaDB
         metadata = {k: str(v) for k, v in doc["metadata"].items()}
         doc_metadatas.append(metadata)
-        
+
         # Create a unique ID for the document, e.g., based on its content hash or filename
         # Using filename as ID, assuming filenames are unique within the `retrieved_components` dir.
         # If not unique, consider hashing content or using a UUID.
@@ -107,7 +107,7 @@ def add_documents(documents: list[dict]):
     try:
         # Generate embeddings for all document contents
         embeddings = embedding_model.encode(doc_contents, convert_to_tensor=False)
-        
+
         # Ensure embeddings are a list of lists of floats
         embeddings_list = embeddings.tolist() if hasattr(embeddings, 'tolist') else embeddings
 
@@ -143,7 +143,7 @@ def query_documents(query_text: str, n_results: int = 5) -> list[dict]:
     if collection is None or embedding_model is None:
         print("Error: ChromaDB collection or SentenceTransformer model is not initialized. Cannot query documents.")
         return []
-    
+
     if not query_text:
         print("Error: Query text is empty.")
         return []
@@ -151,16 +151,16 @@ def query_documents(query_text: str, n_results: int = 5) -> list[dict]:
     try:
         # Generate an embedding for the query text
         query_embedding = embedding_model.encode(query_text, convert_to_tensor=False)
-        
+
         # Ensure query_embedding is a list of floats (it will be if input query_text is a single string)
         query_embedding_list = query_embedding.tolist() if hasattr(query_embedding, 'tolist') else query_embedding
-        
+
         results = collection.query(
             query_embeddings=[query_embedding_list], # Must be a list of embeddings
             n_results=min(n_results, collection.count()), # Cannot request more results than items in collection
             include=['documents', 'metadatas', 'distances']
         )
-        
+
         retrieved_docs = []
         if results and results.get('documents') and results.get('metadatas'):
             # ChromaDB returns lists of lists for documents, metadatas, etc.
@@ -175,7 +175,7 @@ def query_documents(query_text: str, n_results: int = 5) -> list[dict]:
             print(f"Query successful. Retrieved {len(retrieved_docs)} documents for: '{query_text}'")
         else:
             print(f"No results found or unexpected result structure for query: '{query_text}'")
-            
+
         return retrieved_docs
     except Exception as e:
         print(f"Error querying ChromaDB with text '{query_text}': {e}")
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
             if react_documents:
                 print(f"Loaded {len(react_documents)} React component documents.")
-                
+
                 # 2. Add them to ChromaDB
                 print("\n--- Adding React components to ChromaDB ---")
                 # Clear the collection for a clean test run each time (optional)
@@ -255,7 +255,7 @@ if __name__ == '__main__':
                     print("\n--- Querying ChromaDB for React components ---")
                     sample_query = "a button component"
                     query_results = query_documents(sample_query, n_results=2)
-                    
+
                     if query_results:
                         print(f"\nFound {len(query_results)} results for query: '{sample_query}':")
                         for i, doc in enumerate(query_results):
