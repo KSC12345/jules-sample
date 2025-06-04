@@ -1,27 +1,55 @@
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
+  # backend:
+  #   build: ./backend
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - chroma_data_volume:/app/chroma_data # Persist ChromaDB data
+  #     # Optional: Mount local code for development (uncomment if needed)
+  #     # - ./backend:/app
+  #   container_name: rag_chatbot_backend
+  #   environment:
+  #     CHROMA_DB_PATH: /app/chroma_data
+  #   # healthcheck:
+  #   #   test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+  #   #   interval: 30s
+  #   #   timeout: 10s
+  #   #   retries: 3
+
+  rag_mcp_server:
+    build:
+      context: ./rag_app_mcp_server
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000" # Host port 8001 to container port 8000
     volumes:
-      - chroma_data_volume:/app/chroma_data # Persist ChromaDB data
-      # Optional: Mount local code for development (uncomment if needed)
-      # - ./backend:/app 
-    container_name: rag_chatbot_backend
+      - chroma_data_mcp_server:/app/chroma_data # Named volume for ChromaDB
+      - ./rag_app_mcp_server:/app # Mount local code for development
+    container_name: rag_mcp_server_container
     environment:
-      # Add any environment variables your backend needs
-      # Example: PYTHONUNBUFFERED: 1 (already in Dockerfile)
-      #          LOG_LEVEL: info
-      # Ensure ChromaDB path in vector_store.py matches the volume mount if it's made configurable
-      CHROMA_DB_PATH: /app/chroma_data 
-    # Healthcheck (optional, but good practice)
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+      CHROMA_DB_PATH: /app/chroma_data # Path inside the container where ChromaDB is stored
+      # PYTHONUNBUFFERED, WORKDIR, and CMD are set in Dockerfile
+    restart: unless-stopped
+
+  rag_client_app:
+    build:
+      context: ./rag_app_client
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000" # Host port 8002 to container port 8000
+    volumes:
+      - chroma_data_client_app:/app/chroma_data # Named volume for ChromaDB
+      - ./rag_app_client:/app # Mount local code for development
+    container_name: rag_client_app_container
+    environment:
+      CHROMA_DB_PATH: /app/chroma_data # Path inside the container for this app's ChromaDB
+      MCP_SERVER_URL: ws://rag_mcp_server_container:8000/ws/chat # For inter-container communication
+      # PYTHONUNBUFFERED, WORKDIR, and CMD are set in Dockerfile
+    depends_on:
+      - rag_mcp_server # Ensure MCP server starts first
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -29,10 +57,12 @@ services:
       - "3000:80" # Map host port 3000 to container port 80 (Nginx default)
     container_name: rag_chatbot_frontend
     depends_on:
-      - backend # Ensure backend starts before frontend (for API calls)
-    # No volumes needed for frontend in production, as it serves static files.
-    # For development, you might mount src, but build is separate.
+      - rag_client_app # Frontend likely interacts with the client app
+    restart: unless-stopped
 
 volumes:
-  chroma_data_volume: # Define the named volume for ChromaDB persistence
-    driver: local # Default, can be omitted. Specifies local storage.
+  # chroma_data_volume: # Old volume, removed
+  chroma_data_mcp_server: # Named volume for MCP Server's ChromaDB
+    driver: local
+  chroma_data_client_app: # Named volume for Client App's ChromaDB
+    driver: local

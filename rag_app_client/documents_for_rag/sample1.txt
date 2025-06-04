@@ -1,0 +1,1 @@
+This is a document from the Client RAG App. It focuses on local weather patterns and regional gardening tips. This app handles common queries locally and does not require the FORWARD_TO_MCP keyword for its primary dataset. Information about rare plants and soil enrichment can be found here.

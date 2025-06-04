@@ -1,0 +1,9 @@
+pytest
+httpx
+pytest-asyncio
+# Add other testing-specific dependencies if needed, e.g., for mocking
+# We'll use unittest.mock which is part of the standard library.
+# sentence-transformers and chromadb might be needed if testing those interactions directly
+# without full mocking, but let's try to mock them first.
+# sentence-transformers
+# chromadb

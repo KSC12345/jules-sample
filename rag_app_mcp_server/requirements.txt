@@ -1,0 +1,30 @@
+fastapi==0.115.9
+uvicorn[standard]==0.34.2
+chromadb==1.0.10
+sentence-transformers==4.1.0
+# torch and transformers are dependencies of sentence-transformers,
+# but listing them explicitly to acknowledge their importance.
+# Versions might be constrained by sentence-transformers.
+# The previous install logs showed sentence-transformers 4.1.0 pulled:
+# transformers<5.0.0,>=4.41.0 (resolved to 4.52.3)
+# torch>=1.11.0 (resolved to 2.7.0)
+torch>=1.11.0
+transformers>=4.41.0
+PyPDF2==3.0.1
+python-docx==1.1.2
+
+# Other direct dependencies identified from previous installs:
+# From chromadb:
+# numpy>=1.22.5 (resolved to 2.2.6)
+# onnxruntime>=1.14.1 (resolved to 1.22.0)
+# pydantic>=1.9 (resolved to 2.11.5, but FastAPI itself might have a tighter pin)
+# From sentence-transformers:
+# scikit-learn
+# scipy
+# Pillow
+# For simplicity and to rely on primary dependencies to resolve these,
+# I will not list all transitive dependencies here.
+# The build process will fetch them.
+
+# For uvicorn[standard] - it includes httptools, websockets, python-dotenv, uvloop, watchfiles
+# These will be handled by the [standard] extra.
